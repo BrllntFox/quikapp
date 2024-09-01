@@ -10,52 +10,73 @@ import Modal from "@/components/shared/Modal";
 import EventForm from "@/components/events/EventForm";
 import { type Organizer, type OrganizerId } from "@/lib/db/schema/organizers";
 import { setPublicEvent } from "@/lib/actions/events";
+import { createTicketAction } from "@/lib/actions/tickets";
+import { NewTicketParams } from "@/lib/db/schema/tickets";
+import { getUserAuth } from "@/lib/auth/utils";
 
 export default function OptimisticEvent({
   event,
   organizers,
   organizerId,
+  forPublic,
+  isOwner
 }: {
   event: Event;
   organizers: Organizer[];
   organizerId?: OrganizerId;
+  forPublic?: boolean,
+  isOwner?: boolean
 }) {
   const [isPending, startTransition] = useTransition();
-  
+
   const [open, setOpen] = useState(false);
+  const [ticketOpen,setTicketOpen] = useState(false)
   const openModal = (_?: Event) => {
     setOpen(true);
   };
   const closeModal = () => setOpen(false);
   const [optimisticEvent, setOptimisticEvent] = useOptimistic(
-    event   
+    event
   );
   const updateEvent: TAddOptimistic = (input) =>
     setOptimisticEvent({ ...input.data });
 
- async function updateStatus ({ event }: { event: Event })  {
+  async function updateStatus({ event }: { event: Event }) {
     try {
       startTransition(async () => {
-        const newStatus = event.status==="public"?"unpublic":"public"
-        const pendingEvent= {...event,status:newStatus}
+        const newStatus = event.status === "public" ? "unpublic" : "public"
+        const pendingEvent = { ...event, status: newStatus }
         console.log(newStatus)
         //optimistic UI
         updateEvent({
-          data:pendingEvent,
-          action:"update"
+          data: pendingEvent,
+          action: "update"
         })
         //action
         const err = await setPublicEvent(event.id, newStatus)
-        console.log("err:   ",err)
+        console.log("err:   ", err)
       }
       )
     }
     catch (e) {
       throw new Error(`Error at: ${e}`)
     }
-
   }
 
+  async function createNewTicket() {
+    const {session} = await getUserAuth()
+    const user = session?.user
+    if (user) {
+     ///
+      }
+    }
+    
+try{
+
+} catch (e) {
+  throw new Error("")
+}
+  }
 
   return (
     <div className="m-4">
@@ -69,19 +90,33 @@ export default function OptimisticEvent({
           addOptimistic={updateEvent}
         />
       </Modal>
+      <Modal open={ticketOpen} setOpen={setTicketOpen}>
+        <TicketForm
+          group
+        />
+      </Modal>
       <div className="flex justify-between items-end mb-4">
         <h1 className="font-semibold text-2xl">{optimisticEvent.eventName}</h1>
         <div className="flex gap-2">
-          <Button className="" onClick={() => setOpen(true)}>
-            Edit
-          </Button>
-          <Button disabled={isPending} variant={"secondary"} onClick={() => updateStatus({ event: event })}>
-            {optimisticEvent.status === "unpublic" ? "Public" : "Unpublic"}
-          </Button>
+          {forPublic &&
+            (
+              <Button onClick={setTicketOpen(true)}> Get Ticket </Button>
+            )}
+          {
+            isOwner &&
+            (<>
+              <Button className="" onClick={() => setOpen(true)}>
+                Edit
+              </Button>
+              <Button disabled={isPending} variant={"secondary"} onClick={() => updateStatus({ event: event })}>
+                {optimisticEvent.status === "unpublic" ? "Public" : "Unpublic"}
+              </Button>
+            </>
+            )}
+
+
         </div>
       </div>
-
-
 
       <pre
         className={cn(
@@ -91,10 +126,7 @@ export default function OptimisticEvent({
       >
         {JSON.stringify(optimisticEvent, null, 2)}
       </pre>
-    </div>
+    </div >
   );
-}
-function startMutation(arg0: () => Promise<void>) {
-  throw new Error("Function not implemented.");
 }
 

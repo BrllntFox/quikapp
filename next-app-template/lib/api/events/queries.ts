@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/index";
 import { eq, and } from "drizzle-orm";
-import { getUserAuth } from "@/lib/auth/utils";
+import { checkAuth, getUserAuth } from "@/lib/auth/utils";
 import { type EventId, eventIdSchema, events } from "@/lib/db/schema/events";
 import { organizers } from "@/lib/db/schema/organizers";
 import { groupOfTickets, type CompleteGroupOfTicket } from "@/lib/db/schema/groupOfTickets";
@@ -13,6 +13,13 @@ export const getEvents = async () => {
   return { events: e };
 };
 
+export const getPublicEvents = async () => {
+  const { session } = await getUserAuth();
+  const rows = await db.select({ event: events, organizer: organizers }).from(events).leftJoin(organizers, eq(events.organizerId, organizers.id)).where(eq(events.status,"public"));
+  const e = rows .map((r) => ({ ...r.event, organizer: r.organizer})); 
+  return { publicEvents: e };
+};
+
 export const getEventById = async (id: EventId) => {
   const { session } = await getUserAuth();
   const { id: eventId } = eventIdSchema.parse({ id });
@@ -23,10 +30,11 @@ export const getEventById = async (id: EventId) => {
 };
 
 export const getEventByIdWithGroupOfTicketsAndCheckInSections = async (id: EventId) => {
-  const { session } = await getUserAuth();
+  // const { session } = await getUserAuth();
+  await checkAuth()
   const { id: eventId } = eventIdSchema.parse({ id });
-  const rows = await db.select({ event: events, groupOfTicket: groupOfTickets }).from(events).where(and(eq(events.id, eventId), eq(events.userId, session?.user.id!))).leftJoin(groupOfTickets, eq(events.id, groupOfTickets.eventId))
-  const crows = await db.select({ event: events, checkInSection: checkInSections }).from(events).where(and(eq(events.id, eventId), eq(events.userId, session?.user.id!))).leftJoin(checkInSections, eq(events.id, checkInSections.eventId));
+  const rows = await db.select({ event: events, groupOfTicket: groupOfTickets }).from(events).where(eq(events.id, eventId)).leftJoin(groupOfTickets, eq(events.id, groupOfTickets.eventId))
+  const crows = await db.select({ event: events, checkInSection: checkInSections }).from(events).where(eq(events.id, eventId)).leftJoin(checkInSections, eq(events.id, checkInSections.eventId));
   if (rows.length === 0) return {};
   const e = rows[0].event;
   const eg = rows.filter((r) => r.groupOfTicket !== null).map((g) => g.groupOfTicket) as CompleteGroupOfTicket[];

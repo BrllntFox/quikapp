@@ -11,6 +11,13 @@ export const getOrganizers = async () => {
   return { organizers: o };
 };
 
+export const getPublicOrganizers = async () => {
+  const { session } = await getUserAuth();
+  const rows = await db.select().from(organizers);
+  const o = rows
+  return { publicOrganizers: o };
+};
+
 export const getOrganizerById = async (id: OrganizerId) => {
   const { session } = await getUserAuth();
   const { id: organizerId } = organizerIdSchema.parse({ id });

@@ -2,9 +2,10 @@ import { Suspense } from "react";
 
 import Loading from "@/app/loading";
 import EventList from "@/components/events/EventList";
-import { getEvents } from "@/lib/api/events/queries";
-import { getOrganizers } from "@/lib/api/organizers/queries";
+import { getEvents, getPublicEvents } from "@/lib/api/events/queries";
+import { getOrganizers, getPublicOrganizers } from "@/lib/api/organizers/queries";
 import { checkAuth } from "@/lib/auth/utils";
+import { Divider } from "@nextui-org/divider";
 
 export const revalidate = 0;
 
@@ -21,14 +22,23 @@ export default async function EventsPage() {
   );
 }
 
-const Events = async () => {
+const Events = async ({ forPublic }: { forPublic?: boolean }) => {
   await checkAuth();
-
-  const { events } = await getEvents();
+  const { publicEvents } = await getPublicEvents()
+  const {publicOrganizers} = await getPublicOrganizers()
+  console.log(publicOrganizers)
+  const { events } = await getEvents()
   const { organizers } = await getOrganizers();
   return (
     <Suspense fallback={<Loading />}>
-      <EventList events={events} organizers={organizers} />
+      <div className="flex-1 flex-rows gap-10">
+        <Divider className="my-6"/>
+        <h1 className="font-semibold text-2xl my-2">Organizer's Events</h1>
+        <EventList events={events} organizers={organizers} />
+        <Divider className="my-6"/>
+        <h1 className="font-semibold text-2xl my-2">Public Events</h1>
+        <EventList events={publicEvents} organizers={publicOrganizers} />
+      </div>
     </Suspense>
   );
 };
